@@ -6,7 +6,6 @@ import { CHART_HEIGHT, CHART_WIDTH, renderIntersectionChart } from "@/lib/canvas
 
 interface Props {
   photosByCategory: Record<string, string>;
-  identityStatement: string;
   axisLabels: AxisLabels;
   placements: QuadrantPlacement[];
   onRendered?: () => void;
@@ -14,7 +13,7 @@ interface Props {
 
 export const IntersectionChart = forwardRef<HTMLCanvasElement, Props>(
   function IntersectionChart(
-    { photosByCategory, identityStatement, axisLabels, placements, onRendered },
+    { photosByCategory, axisLabels, placements, onRendered },
     ref
   ) {
     useEffect(() => {
@@ -24,7 +23,7 @@ export const IntersectionChart = forwardRef<HTMLCanvasElement, Props>(
       renderIntersectionChart(
         canvas,
         photosByCategory,
-        { identityStatement, axisLabels, placements },
+        { axisLabels, placements },
         () => cancelled
       ).then(() => {
         if (!cancelled) onRendered?.();
@@ -33,7 +32,7 @@ export const IntersectionChart = forwardRef<HTMLCanvasElement, Props>(
         cancelled = true;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [photosByCategory, identityStatement, axisLabels, placements]);
+    }, [photosByCategory, axisLabels, placements]);
 
     return (
       <canvas

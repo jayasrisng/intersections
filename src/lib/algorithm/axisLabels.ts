@@ -1,55 +1,44 @@
-import type { AxisLabels, Category, TraitDimension } from "@/lib/types";
+import type { AxisLabels, QuadrantPlacement } from "@/lib/types";
+import { permutations } from "@/lib/algorithm/quadrant";
 
-interface AxisPair {
-  low: string;
-  high: string;
-  affinityDim: TraitDimension;
-}
+type PoleKey = keyof AxisLabels;
 
-// x-axis: inner orientation (low) <-> outer orientation (high)
-const X_AXIS_PAIRS: AxisPair[] = [
-  { low: "Deep Focus", high: "External Impact", affinityDim: "analyticalDepth" },
-  { low: "Quiet Craft", high: "Public Stage", affinityDim: "technicalExecution" },
-  { low: "Inner World", high: "Outward Motion", affinityDim: "creativeExpression" },
-  { low: "Solo Depth", high: "Shared Momentum", affinityDim: "socialEnergy" },
-];
-
-// y-axis: stability (low) <-> motion (high)
-const Y_AXIS_PAIRS: AxisPair[] = [
-  { low: "Calm Clarity", high: "Creative Chaos", affinityDim: "creativeExpression" },
-  { low: "Steady Ground", high: "Constant Motion", affinityDim: "exploration" },
-  { low: "Still Waters", high: "Kinetic Energy", affinityDim: "leadership" },
-  { low: "Grounded Clarity", high: "In Flux", affinityDim: "productIntuition" },
-];
-
-function pickPair(pairs: AxisPair[], categories: Category[]): AxisPair {
-  let best = pairs[0];
-  let bestScore = -Infinity;
-  for (const pair of pairs) {
-    const avg =
-      categories.reduce((sum, c) => sum + c.vector[pair.affinityDim], 0) /
-      categories.length;
-    if (avg > bestScore) {
-      bestScore = avg;
-      best = pair;
-    }
-  }
-  return best;
-}
+const POLE_VECTORS: Record<PoleKey, { x: number; y: number }> = {
+  xLeft: { x: -1, y: 0 },
+  xRight: { x: 1, y: 0 },
+  yTop: { x: 0, y: 1 },
+  yBottom: { x: 0, y: -1 },
+};
 
 /**
- * Chooses axis label wording dynamically based on which trait dimension is
- * most dominant across the user's four selected categories, rather than a
- * single hardcoded pair of labels.
+ * Labels each end of the axes with the name of the category that sits
+ * closest to it, rather than an abstract contrast phrase — so the chart
+ * reads as "your four" instead of made-up jargon. Uses the same
+ * optimal-assignment approach as quadrant placement (4! = 24 permutations)
+ * so all four selected categories end up labeling a distinct pole.
  */
-export function generateAxisLabels(categories: Category[]): AxisLabels {
-  const xPair = pickPair(X_AXIS_PAIRS, categories);
-  const yPair = pickPair(Y_AXIS_PAIRS, categories);
+export function generateAxisLabels(placements: QuadrantPlacement[]): AxisLabels {
+  const poleKeys = Object.keys(POLE_VECTORS) as PoleKey[];
 
-  return {
-    xLeft: xPair.low,
-    xRight: xPair.high,
-    yTop: yPair.high,
-    yBottom: yPair.low,
-  };
+  let best = poleKeys;
+  let bestCost = Infinity;
+
+  for (const perm of permutations(poleKeys)) {
+    let cost = 0;
+    perm.forEach((pole, i) => {
+      const vector = POLE_VECTORS[pole];
+      const point = placements[i];
+      cost += Math.hypot(vector.x - point.x, vector.y - point.y);
+    });
+    if (cost < bestCost) {
+      bestCost = cost;
+      best = perm;
+    }
+  }
+
+  const labels = {} as AxisLabels;
+  best.forEach((pole, i) => {
+    labels[pole] = placements[i].category.name;
+  });
+  return labels;
 }

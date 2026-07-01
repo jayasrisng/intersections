@@ -1,7 +1,7 @@
 import type { AxisLabels, QuadrantPlacement } from "@/lib/types";
 
 export const CHART_WIDTH = 1600;
-export const CHART_HEIGHT = 2000;
+export const CHART_HEIGHT = 1500;
 
 const ACCENTS: Record<"TL" | "TR" | "BL" | "BR", string> = {
   TL: "#5ef1ff",
@@ -11,7 +11,6 @@ const ACCENTS: Record<"TL" | "TR" | "BL" | "BR", string> = {
 };
 
 interface RenderModel {
-  identityStatement: string;
   axisLabels: AxisLabels;
   placements: QuadrantPlacement[];
 }
@@ -44,6 +43,28 @@ function wrapText(
   }
   if (line) lines.push(line);
   return lines;
+}
+
+/** Shrinks the font size until `text` fits within `maxWidth`, so long
+ * category names never get clipped at the edge of the chart. */
+function fitFontSize(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  { family, weight = "500", maxSize = 24, minSize = 13 }: {
+    family: string;
+    weight?: string;
+    maxSize?: number;
+    minSize?: number;
+  }
+): number {
+  let size = maxSize;
+  ctx.font = `${weight} ${size}px ${family}`;
+  while (size > minSize && ctx.measureText(text).width > maxWidth) {
+    size -= 1;
+    ctx.font = `${weight} ${size}px ${family}`;
+  }
+  return size;
 }
 
 let cachedDisplayFont: string | null = null;
@@ -93,8 +114,9 @@ export async function renderIntersectionChart(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
 
-  const { identityStatement, axisLabels, placements } = model;
+  const { axisLabels, placements } = model;
   const displayFont = getDisplayFontFamily();
+  const sansFont = "system-ui, -apple-system, sans-serif";
 
   // --- Background ---
   ctx.fillStyle = "#050507";
@@ -113,36 +135,11 @@ export async function renderIntersectionChart(
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, CHART_WIDTH, CHART_HEIGHT);
 
-  // --- Header ---
-  ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = "500 22px 'Courier New', monospace";
-  ctx.save();
-  ctx.letterSpacing = "6px";
-  ctx.fillText("IDENTITY INTERSECTION", CHART_WIDTH / 2, 108);
-  ctx.restore();
-
-  ctx.fillStyle = "#f5f5f7";
-  ctx.font = `500 58px ${displayFont}`;
-  const titleLines = wrapText(ctx, identityStatement, CHART_WIDTH * 0.82);
-  let titleY = 200;
-  for (const line of titleLines) {
-    ctx.fillText(line, CHART_WIDTH / 2, titleY);
-    titleY += 66;
-  }
-
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.font = "400 23px system-ui, -apple-system, sans-serif";
-  ctx.fillText(
-    "Four identities. One shape. This is where they meet.",
-    CHART_WIDTH / 2,
-    titleY + 18
-  );
-
   // --- Chart square geometry ---
-  const chartTop = titleY + 90;
-  const chartSize = CHART_WIDTH - 320;
-  const chartLeft = (CHART_WIDTH - chartSize) / 2;
+  const sideMargin = 230;
+  const chartTop = 110;
+  const chartSize = CHART_WIDTH - sideMargin * 2;
+  const chartLeft = sideMargin;
   const centerX = chartLeft + chartSize / 2;
   const centerY = chartTop + chartSize / 2;
   const halfSize = chartSize / 2;
@@ -193,16 +190,25 @@ export async function renderIntersectionChart(
   ctx.arc(centerX, centerY, 40, 0, Math.PI * 2);
   ctx.fill();
 
-  // Axis labels
-  ctx.font = "500 24px system-ui, -apple-system, sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.75)";
+  // Axis labels — the actual selected category names, sized to always fit
+  // within the side/top/bottom margins so nothing gets clipped.
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  const sideMaxWidth = sideMargin - 44;
+
   ctx.textAlign = "left";
-  ctx.fillText(axisLabels.xRight.toUpperCase(), chartLeft + chartSize + 24, centerY + 8);
+  fitFontSize(ctx, axisLabels.xRight, sideMaxWidth, { family: sansFont });
+  ctx.fillText(axisLabels.xRight, chartLeft + chartSize + 24, centerY + 8);
+
   ctx.textAlign = "right";
-  ctx.fillText(axisLabels.xLeft.toUpperCase(), chartLeft - 24, centerY + 8);
+  fitFontSize(ctx, axisLabels.xLeft, sideMaxWidth, { family: sansFont });
+  ctx.fillText(axisLabels.xLeft, chartLeft - 24, centerY + 8);
+
   ctx.textAlign = "center";
-  ctx.fillText(axisLabels.yTop.toUpperCase(), centerX, chartTop - 34);
-  ctx.fillText(axisLabels.yBottom.toUpperCase(), centerX, chartTop + chartSize + 56);
+  fitFontSize(ctx, axisLabels.yTop, chartSize * 0.9, { family: sansFont });
+  ctx.fillText(axisLabels.yTop, centerX, chartTop - 34);
+
+  fitFontSize(ctx, axisLabels.yBottom, chartSize * 0.9, { family: sansFont });
+  ctx.fillText(axisLabels.yBottom, centerX, chartTop + chartSize + 56);
 
   // --- Photo stickers + captions ---
   const stickerDiameter = chartSize * 0.16;
@@ -257,7 +263,7 @@ export async function renderIntersectionChart(
     const lineHeight = 26;
     const nameY = py + direction * (stickerDiameter / 2 + 34);
 
-    ctx.font = "400 20px system-ui, -apple-system, sans-serif";
+    ctx.font = `400 20px ${sansFont}`;
     ctx.fillStyle = "rgba(255,255,255,0.6)";
     const captionLines = wrapText(ctx, placement.caption, stickerDiameter * 2.1).slice(0, 2);
 
@@ -276,7 +282,7 @@ export async function renderIntersectionChart(
     ctx.fillText(placement.category.name, px, nameY);
 
     if (!isTop) {
-      ctx.font = "400 20px system-ui, -apple-system, sans-serif";
+      ctx.font = `400 20px ${sansFont}`;
       ctx.fillStyle = "rgba(255,255,255,0.6)";
       let y = nameY + lineHeight;
       captionLines.forEach((line) => {

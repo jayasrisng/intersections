@@ -10,7 +10,6 @@ import { IntersectionChart } from "@/components/chart/IntersectionChart";
 import { getCategoryById } from "@/lib/data/categories";
 import { placeCategoriesInQuadrants } from "@/lib/algorithm/quadrant";
 import { generateAxisLabels } from "@/lib/algorithm/axisLabels";
-import { generateIdentityStatement } from "@/lib/algorithm/caption";
 import { downloadCanvasAsPng } from "@/lib/canvasExport";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -50,12 +49,8 @@ export default function ResultPage() {
     [categories]
   );
   const axisLabels = useMemo(
-    () => (categories.length === 4 ? generateAxisLabels(categories) : null),
-    [categories]
-  );
-  const identityStatement = useMemo(
-    () => generateIdentityStatement(categories),
-    [categories]
+    () => (placements.length === 4 ? generateAxisLabels(placements) : null),
+    [placements]
   );
   const photosByCategory = useMemo(() => {
     const map: Record<string, string> = {};
@@ -134,7 +129,6 @@ export default function ResultPage() {
         <IntersectionChart
           ref={canvasRef}
           photosByCategory={photosByCategory}
-          identityStatement={identityStatement}
           axisLabels={axisLabels}
           placements={placements}
           onRendered={() => setRendering(false)}

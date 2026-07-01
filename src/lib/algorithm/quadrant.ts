@@ -15,7 +15,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function permutations<T>(items: T[]): T[][] {
+export function permutations<T>(items: T[]): T[][] {
   if (items.length <= 1) return [items];
   const result: T[][] = [];
   items.forEach((item, i) => {

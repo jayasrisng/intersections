@@ -37,9 +37,9 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.15 }}
               className="mt-7 max-w-md text-base sm:text-lg text-muted leading-relaxed"
             >
-              Twelve quick questions. No spirit animals, no "which character
-              are you." Just some quiet math across people and professions —
-              landing on the four that actually add up to you.
+              Twelve quick questions. No spirit animals, no &quot;which
+              character are you.&quot; Just some quiet math across people and
+              professions — landing on the four that actually add up to you.
             </motion.p>
 
             <motion.div
