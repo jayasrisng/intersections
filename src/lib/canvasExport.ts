@@ -219,3 +219,7 @@ export function downloadCanvasAsPng(canvas: HTMLCanvasElement, filename = "inter
   link.download = filename;
   link.click();
 }
+
+export function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/png", 1.0));
+}
