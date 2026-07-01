@@ -41,8 +41,8 @@ export default function PhotosPage() {
     setPhoto(categoryId, { categoryId, originalDataUrl, stickerDataUrl });
   }
 
-  function handlePlaceholder(categoryId: string, name: string, seed: number) {
-    const stickerDataUrl = createPlaceholderSticker(name, seed);
+  async function handlePlaceholder(categoryId: string, seed: number) {
+    const stickerDataUrl = await createPlaceholderSticker(categoryId, seed);
     setPhoto(categoryId, {
       categoryId,
       originalDataUrl: stickerDataUrl,
@@ -67,8 +67,9 @@ export default function PhotosPage() {
           One photo per intersection
         </h1>
         <p className="mt-2 text-muted text-sm sm:text-base max-w-xl">
-          Each photo becomes a soft-masked sticker cutout, ready to place on
-          your chart. No photo? Generate a placeholder instead.
+          Each photo becomes a die-cut sticker of you, background removed
+          automatically. No photo? Generate an icon for the intersection
+          instead.
         </p>
       </div>
 
@@ -79,7 +80,7 @@ export default function PhotosPage() {
             category={category}
             stickerDataUrl={photos[category.id]?.stickerDataUrl}
             onFile={(file) => handleFile(category.id, file)}
-            onPlaceholder={() => handlePlaceholder(category.id, category.name, i)}
+            onPlaceholder={() => handlePlaceholder(category.id, i)}
           />
         ))}
       </div>

@@ -213,23 +213,30 @@ export async function renderIntersectionChart(
     const accent = ACCENTS[placement.quadrant];
     const photoSrc = photosByCategory[placement.category.id];
 
-    // Accent ring
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(px, py, stickerDiameter / 2 + 5, 0, Math.PI * 2);
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
+    // Soft quadrant-colored halo behind the sticker (the sticker itself
+    // already carries its own die-cut white outline).
+    const halo = ctx.createRadialGradient(
+      px,
+      py,
+      stickerDiameter * 0.15,
+      px,
+      py,
+      stickerDiameter * 0.7
+    );
+    halo.addColorStop(0, `${accent}33`);
+    halo.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = halo;
+    ctx.fillRect(
+      px - stickerDiameter,
+      py - stickerDiameter,
+      stickerDiameter * 2,
+      stickerDiameter * 2
+    );
 
     if (photoSrc) {
       try {
         const img = await loadImage(photoSrc);
         if (isStale()) return;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(px, py, stickerDiameter / 2, 0, Math.PI * 2);
-        ctx.clip();
         ctx.drawImage(
           img,
           px - stickerDiameter / 2,
@@ -237,9 +244,8 @@ export async function renderIntersectionChart(
           stickerDiameter,
           stickerDiameter
         );
-        ctx.restore();
       } catch {
-        // ignore broken image, ring + label still render
+        // ignore broken image, halo + label still render
       }
     }
 
