@@ -37,9 +37,9 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.15 }}
               className="mt-7 max-w-md text-base sm:text-lg text-muted leading-relaxed"
             >
-              Twelve questions. A library of identities drawn from every kind
-              of work — research, care, craft, law, art, leadership. A
-              weighted trait model picks the four that actually define you.
+              Twelve quick questions. No spirit animals, no "which character
+              are you." Just some quiet math across people and professions —
+              landing on the four that actually add up to you.
             </motion.p>
 
             <motion.div
