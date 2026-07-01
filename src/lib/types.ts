@@ -1,4 +1,4 @@
-// Eight-dimensional trait space every category and every user lives in.
+// Eight-dimensional trait space every library category lives in.
 export const TRAIT_DIMENSIONS = [
   "analyticalDepth",
   "creativeExpression",
@@ -44,12 +44,19 @@ export interface SelectedCategoryResult {
   similarity: number;
 }
 
-export interface QuadrantPlacement {
-  category: Category;
-  quadrant: "TL" | "TR" | "BL" | "BR";
-  x: number; // -1..1, position within the full chart space
+/** One of the user's four chosen intersections — either pulled from the
+ * library (has a trait vector, used for quiz recommendations and a
+ * starting position) or typed in freehand (no vector, user places it
+ * manually). */
+export interface SelectedEntry {
+  id: string;
+  name: string;
+  isCustom: boolean;
+}
+
+export interface Position {
+  x: number; // -1..1
   y: number; // -1..1
-  caption: string;
 }
 
 export interface AxisLabels {
@@ -60,7 +67,14 @@ export interface AxisLabels {
 }
 
 export interface PhotoAsset {
-  categoryId: string;
+  entryId: string;
   originalDataUrl: string;
   stickerDataUrl: string;
+}
+
+export interface PlacedItem {
+  entry: SelectedEntry;
+  stickerDataUrl?: string;
+  x: number;
+  y: number;
 }

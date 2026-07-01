@@ -1,26 +1,29 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { PhotoAsset, QuizAnswerMap } from "@/lib/types";
+import type { PhotoAsset, Position, QuizAnswerMap, SelectedEntry } from "@/lib/types";
 
 interface AppState {
   quizAnswers: QuizAnswerMap;
-  selectedCategoryIds: string[];
+  selection: SelectedEntry[];
   photos: Record<string, PhotoAsset>;
+  positions: Record<string, Position>;
   hasHydrated: boolean;
 
   setAnswer: (questionId: string, optionId: string) => void;
   resetQuiz: () => void;
-  setSelectedCategories: (ids: string[]) => void;
-  setPhoto: (categoryId: string, asset: PhotoAsset) => void;
-  removePhoto: (categoryId: string) => void;
+  setSelection: (entries: SelectedEntry[]) => void;
+  setPhoto: (entryId: string, asset: PhotoAsset) => void;
+  removePhoto: (entryId: string) => void;
+  setPosition: (entryId: string, position: Position) => void;
   resetAll: () => void;
   setHasHydrated: (value: boolean) => void;
 }
 
 const initialState = {
   quizAnswers: {} as QuizAnswerMap,
-  selectedCategoryIds: [] as string[],
+  selection: [] as SelectedEntry[],
   photos: {} as Record<string, PhotoAsset>,
+  positions: {} as Record<string, Position>,
 };
 
 export const useAppStore = create<AppState>()(
@@ -36,20 +39,24 @@ export const useAppStore = create<AppState>()(
 
       resetQuiz: () => set({ quizAnswers: {} }),
 
-      setSelectedCategories: (ids) =>
-        set(() => ({ selectedCategoryIds: ids.slice(0, 4) })),
+      setSelection: (entries) => set(() => ({ selection: entries.slice(0, 4) })),
 
-      setPhoto: (categoryId, asset) =>
+      setPhoto: (entryId, asset) =>
         set((state) => ({
-          photos: { ...state.photos, [categoryId]: asset },
+          photos: { ...state.photos, [entryId]: asset },
         })),
 
-      removePhoto: (categoryId) =>
+      removePhoto: (entryId) =>
         set((state) => {
           const next = { ...state.photos };
-          delete next[categoryId];
+          delete next[entryId];
           return { photos: next };
         }),
+
+      setPosition: (entryId, position) =>
+        set((state) => ({
+          positions: { ...state.positions, [entryId]: position },
+        })),
 
       resetAll: () => set({ ...initialState, hasHydrated: true }),
 

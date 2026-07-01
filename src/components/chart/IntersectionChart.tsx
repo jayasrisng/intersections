@@ -1,38 +1,34 @@
 "use client";
 
 import { forwardRef, useEffect } from "react";
-import type { AxisLabels, QuadrantPlacement } from "@/lib/types";
-import { CHART_HEIGHT, CHART_WIDTH, renderIntersectionChart } from "@/lib/canvasExport";
+import type { AxisLabels } from "@/lib/types";
+import {
+  CHART_HEIGHT,
+  CHART_WIDTH,
+  renderIntersectionChart,
+  type ChartPoint,
+} from "@/lib/canvasExport";
 
 interface Props {
-  photosByCategory: Record<string, string>;
   axisLabels: AxisLabels;
-  placements: QuadrantPlacement[];
+  points: ChartPoint[];
   onRendered?: () => void;
 }
 
 export const IntersectionChart = forwardRef<HTMLCanvasElement, Props>(
-  function IntersectionChart(
-    { photosByCategory, axisLabels, placements, onRendered },
-    ref
-  ) {
+  function IntersectionChart({ axisLabels, points, onRendered }, ref) {
     useEffect(() => {
       const canvas = (ref as React.RefObject<HTMLCanvasElement>)?.current;
       if (!canvas) return;
       let cancelled = false;
-      renderIntersectionChart(
-        canvas,
-        photosByCategory,
-        { axisLabels, placements },
-        () => cancelled
-      ).then(() => {
+      renderIntersectionChart(canvas, { axisLabels, points }, () => cancelled).then(() => {
         if (!cancelled) onRendered?.();
       });
       return () => {
         cancelled = true;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [photosByCategory, axisLabels, placements]);
+    }, [axisLabels, points]);
 
     return (
       <canvas

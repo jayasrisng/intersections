@@ -1,18 +1,25 @@
-import type { AxisLabels, QuadrantPlacement } from "@/lib/types";
+import type { AxisLabels } from "@/lib/types";
 
 export const CHART_WIDTH = 1600;
 export const CHART_HEIGHT = 1500;
 
-const ACCENTS: Record<"TL" | "TR" | "BL" | "BR", string> = {
-  TL: "#5ef1ff",
-  TR: "#b47bff",
-  BL: "#d4ff5e",
-  BR: "#ff6b6b",
-};
+export interface ChartPoint {
+  name: string;
+  x: number; // -1..1
+  y: number; // -1..1
+  stickerDataUrl?: string;
+}
 
 interface RenderModel {
   axisLabels: AxisLabels;
-  placements: QuadrantPlacement[];
+  points: ChartPoint[];
+}
+
+function quadrantAccent(x: number, y: number): string {
+  if (x >= 0 && y >= 0) return "#b47bff"; // TR
+  if (x < 0 && y >= 0) return "#5ef1ff"; // TL
+  if (x < 0 && y < 0) return "#d4ff5e"; // BL
+  return "#ff6b6b"; // BR
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -22,27 +29,6 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = src;
   });
-}
-
-function wrapText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  maxWidth: number
-): string[] {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = test;
-    }
-  }
-  if (line) lines.push(line);
-  return lines;
 }
 
 /** Shrinks the font size until `text` fits within `maxWidth`, so long
@@ -67,22 +53,6 @@ function fitFontSize(
   return size;
 }
 
-let cachedDisplayFont: string | null = null;
-
-function getDisplayFontFamily(): string {
-  if (cachedDisplayFont) return cachedDisplayFont;
-  if (typeof document === "undefined") return "Georgia, serif";
-  const probe = document.createElement("span");
-  probe.className = "font-display";
-  probe.style.position = "absolute";
-  probe.style.visibility = "hidden";
-  document.body.appendChild(probe);
-  const family = getComputedStyle(probe).fontFamily || "Georgia, serif";
-  document.body.removeChild(probe);
-  cachedDisplayFont = family;
-  return family;
-}
-
 function drawArrowhead(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -105,7 +75,6 @@ function drawArrowhead(
 
 export async function renderIntersectionChart(
   canvas: HTMLCanvasElement,
-  photosByCategory: Record<string, string>,
   model: RenderModel,
   isStale: () => boolean = () => false
 ): Promise<void> {
@@ -114,8 +83,7 @@ export async function renderIntersectionChart(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
 
-  const { axisLabels, placements } = model;
-  const displayFont = getDisplayFontFamily();
+  const { axisLabels, points } = model;
   const sansFont = "system-ui, -apple-system, sans-serif";
 
   // --- Background ---
@@ -143,24 +111,6 @@ export async function renderIntersectionChart(
   const centerX = chartLeft + chartSize / 2;
   const centerY = chartTop + chartSize / 2;
   const halfSize = chartSize / 2;
-
-  // Quadrant tint glows
-  const quadrantCenters: Record<"TL" | "TR" | "BL" | "BR", [number, number]> = {
-    TL: [centerX - halfSize / 2, centerY - halfSize / 2],
-    TR: [centerX + halfSize / 2, centerY - halfSize / 2],
-    BL: [centerX - halfSize / 2, centerY + halfSize / 2],
-    BR: [centerX + halfSize / 2, centerY + halfSize / 2],
-  };
-  (Object.keys(quadrantCenters) as Array<"TL" | "TR" | "BL" | "BR">).forEach(
-    (key) => {
-      const [qx, qy] = quadrantCenters[key];
-      const glow = ctx.createRadialGradient(qx, qy, 10, qx, qy, halfSize * 0.9);
-      glow.addColorStop(0, `${ACCENTS[key]}14`);
-      glow.addColorStop(1, "rgba(0,0,0,0)");
-      ctx.fillStyle = glow;
-      ctx.fillRect(chartLeft, chartTop, chartSize, chartSize);
-    }
-  );
 
   // Axis lines
   ctx.strokeStyle = "rgba(255,255,255,0.35)";
@@ -190,8 +140,8 @@ export async function renderIntersectionChart(
   ctx.arc(centerX, centerY, 40, 0, Math.PI * 2);
   ctx.fill();
 
-  // Axis labels — the actual selected category names, sized to always fit
-  // within the side/top/bottom margins so nothing gets clipped.
+  // Axis labels — the four selected names, sized to always fit within the
+  // margins so nothing gets clipped.
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   const sideMaxWidth = sideMargin - 44;
 
@@ -210,17 +160,14 @@ export async function renderIntersectionChart(
   fitFontSize(ctx, axisLabels.yBottom, chartSize * 0.9, { family: sansFont });
   ctx.fillText(axisLabels.yBottom, centerX, chartTop + chartSize + 56);
 
-  // --- Photo stickers + captions ---
-  const stickerDiameter = chartSize * 0.16;
-  for (const placement of placements) {
+  // --- Stickers ---
+  const stickerDiameter = chartSize * 0.18;
+  for (const point of points) {
     if (isStale()) return;
-    const px = centerX + placement.x * halfSize * 0.86;
-    const py = centerY - placement.y * halfSize * 0.86;
-    const accent = ACCENTS[placement.quadrant];
-    const photoSrc = photosByCategory[placement.category.id];
+    const px = centerX + point.x * halfSize * 0.82;
+    const py = centerY - point.y * halfSize * 0.82;
+    const accent = quadrantAccent(point.x, point.y);
 
-    // Soft quadrant-colored halo behind the sticker (the sticker itself
-    // already carries its own die-cut white outline).
     const halo = ctx.createRadialGradient(
       px,
       py,
@@ -239,9 +186,9 @@ export async function renderIntersectionChart(
       stickerDiameter * 2
     );
 
-    if (photoSrc) {
+    if (point.stickerDataUrl) {
       try {
-        const img = await loadImage(photoSrc);
+        const img = await loadImage(point.stickerDataUrl);
         if (isStale()) return;
         ctx.drawImage(
           img,
@@ -251,44 +198,8 @@ export async function renderIntersectionChart(
           stickerDiameter
         );
       } catch {
-        // ignore broken image, halo + label still render
+        // ignore broken image, halo still renders
       }
-    }
-
-    // Name + caption, stacked outward from the sticker (away from center for
-    // top-quadrant items, downward for bottom-quadrant ones) so text never
-    // collides with the photo.
-    const isTop = placement.y >= 0;
-    const direction = isTop ? -1 : 1;
-    const lineHeight = 26;
-    const nameY = py + direction * (stickerDiameter / 2 + 34);
-
-    ctx.font = `400 20px ${sansFont}`;
-    ctx.fillStyle = "rgba(255,255,255,0.6)";
-    const captionLines = wrapText(ctx, placement.caption, stickerDiameter * 2.1).slice(0, 2);
-
-    if (isTop) {
-      // Draw furthest line first (smallest y), walking down toward the name.
-      let y = nameY - lineHeight * captionLines.length;
-      captionLines.forEach((line) => {
-        ctx.fillText(line, px, y);
-        y += lineHeight;
-      });
-    }
-
-    ctx.font = `500 32px ${displayFont}`;
-    ctx.fillStyle = "#f5f5f7";
-    ctx.textAlign = "center";
-    ctx.fillText(placement.category.name, px, nameY);
-
-    if (!isTop) {
-      ctx.font = `400 20px ${sansFont}`;
-      ctx.fillStyle = "rgba(255,255,255,0.6)";
-      let y = nameY + lineHeight;
-      captionLines.forEach((line) => {
-        ctx.fillText(line, px, y);
-        y += lineHeight;
-      });
     }
   }
 

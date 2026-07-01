@@ -1,5 +1,5 @@
-import type { AxisLabels, QuadrantPlacement } from "@/lib/types";
-import { permutations } from "@/lib/algorithm/quadrant";
+import type { AxisLabels } from "@/lib/types";
+import { permutations } from "@/lib/algorithm/permutations";
 
 type PoleKey = keyof AxisLabels;
 
@@ -10,14 +10,19 @@ const POLE_VECTORS: Record<PoleKey, { x: number; y: number }> = {
   yBottom: { x: 0, y: -1 },
 };
 
+export interface NamedPoint {
+  name: string;
+  x: number;
+  y: number;
+}
+
 /**
- * Labels each end of the axes with the name of the category that sits
- * closest to it, rather than an abstract contrast phrase — so the chart
- * reads as "your four" instead of made-up jargon. Uses the same
- * optimal-assignment approach as quadrant placement (4! = 24 permutations)
- * so all four selected categories end up labeling a distinct pole.
+ * Labels each end of the axes with the name of whichever of the four
+ * chosen intersections sits closest to it (by current x/y position) — so
+ * the chart always reads as "your four," never invented phrases. Finds
+ * the optimal one-to-one assignment across all 4! permutations.
  */
-export function generateAxisLabels(placements: QuadrantPlacement[]): AxisLabels {
+export function generateAxisLabels(points: NamedPoint[]): AxisLabels {
   const poleKeys = Object.keys(POLE_VECTORS) as PoleKey[];
 
   let best = poleKeys;
@@ -27,7 +32,7 @@ export function generateAxisLabels(placements: QuadrantPlacement[]): AxisLabels 
     let cost = 0;
     perm.forEach((pole, i) => {
       const vector = POLE_VECTORS[pole];
-      const point = placements[i];
+      const point = points[i];
       cost += Math.hypot(vector.x - point.x, vector.y - point.y);
     });
     if (cost < bestCost) {
@@ -38,7 +43,7 @@ export function generateAxisLabels(placements: QuadrantPlacement[]): AxisLabels 
 
   const labels = {} as AxisLabels;
   best.forEach((pole, i) => {
-    labels[pole] = placements[i].category.name;
+    labels[pole] = points[i].name;
   });
   return labels;
 }

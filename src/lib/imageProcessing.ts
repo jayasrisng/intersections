@@ -1,7 +1,4 @@
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { removeBackground } from "@imgly/background-removal";
-import { getCategoryIcon } from "@/lib/data/categoryIcons";
 
 const STICKER_SIZE = 640;
 
@@ -245,29 +242,21 @@ function blobPath(
   ctx.closePath();
 }
 
-async function loadIconImage(
-  categoryId: string,
-  color: string,
-  size: number
-): Promise<HTMLImageElement> {
-  const Icon = getCategoryIcon(categoryId);
-  const markup = renderToStaticMarkup(
-    createElement(Icon, { color, strokeWidth: 1.6, size, absoluteStrokeWidth: true })
-  );
-  const svgDataUrl = `data:image/svg+xml;base64,${btoa(markup)}`;
-  return loadImage(svgDataUrl);
-}
+const EMOJI_FONT_STACK = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
 /**
  * Generates a sticker for someone who skips the photo step: an organic
- * blob in a gradient unique to this quadrant, with a white die-cut outline
- * and a glyph representing the category itself (not a generic initial).
+ * gradient blob with a white die-cut outline and one or two emoji of the
+ * user's choosing (or auto-suggested from the intersection's name) —
+ * works identically for library categories and freehand custom entries,
+ * since it needs no trait data at all. A second emoji is drawn as a small
+ * badge over the first, so "chef" + "traveller" reads as one mashed-up icon.
  */
-export async function createPlaceholderSticker(
-  categoryId: string,
+export function createEmojiSticker(
+  emojis: string[],
   seed = 0,
   size = STICKER_SIZE
-): Promise<string> {
+): string {
   const { canvas, ctx } = createCanvas(size);
   const center = size / 2;
   const baseRadius = size * 0.36;
@@ -291,12 +280,29 @@ export async function createPlaceholderSticker(
   ctx.fill();
   ctx.restore();
 
-  try {
-    const iconSize = size * 0.4;
-    const iconImg = await loadIconImage(categoryId, "#0b0b0f", iconSize);
-    ctx.drawImage(iconImg, center - iconSize / 2, center - iconSize / 2, iconSize, iconSize);
-  } catch {
-    // If icon rendering fails for any reason, the colored blob still stands alone.
+  const [primary, secondary] = emojis;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (primary && secondary) {
+    // Two emoji mashed into one sticker: primary large and slightly
+    // off-center, secondary as a badge with its own little disc for contrast.
+    ctx.font = `${size * 0.34}px ${EMOJI_FONT_STACK}`;
+    ctx.fillText(primary, center - size * 0.06, center - size * 0.03);
+
+    const badgeX = center + size * 0.18;
+    const badgeY = center + size * 0.19;
+    const badgeRadius = size * 0.135;
+    ctx.beginPath();
+    ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.fill();
+
+    ctx.font = `${size * 0.18}px ${EMOJI_FONT_STACK}`;
+    ctx.fillText(secondary, badgeX, badgeY + size * 0.01);
+  } else if (primary) {
+    ctx.font = `${size * 0.4}px ${EMOJI_FONT_STACK}`;
+    ctx.fillText(primary, center, center + size * 0.02);
   }
 
   return canvas.toDataURL("image/png");

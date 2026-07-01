@@ -1,23 +1,28 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { Upload, Loader2, Wand2 } from "lucide-react";
-import type { Category } from "@/lib/types";
+import { motion, AnimatePresence } from "framer-motion";
+import { Upload, Loader2, Smile, Wand2 } from "lucide-react";
+import { EmojiPicker } from "@/components/photos/EmojiPicker";
+import { suggestEmojisForName } from "@/lib/data/emojiKeywords";
+import type { SelectedEntry } from "@/lib/types";
 
 export function PhotoSlot({
-  category,
+  entry,
   stickerDataUrl,
   onFile,
-  onPlaceholder,
+  onEmoji,
 }: {
-  category: Category;
+  entry: SelectedEntry;
   stickerDataUrl?: string;
   onFile: (file: File) => Promise<void>;
-  onPlaceholder: () => Promise<void>;
+  onEmoji: (emojis: string[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [processing, setProcessing] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const suggestion = suggestEmojisForName(entry.name);
 
   async function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -31,21 +36,21 @@ export function PhotoSlot({
     }
   }
 
-  async function handlePlaceholderClick() {
-    setProcessing(true);
-    try {
-      await onPlaceholder();
-    } finally {
-      setProcessing(false);
-    }
+  function handleEmojiConfirm(emojis: string[]) {
+    onEmoji(emojis);
+    setPickerOpen(false);
+  }
+
+  function handleSuggest() {
+    onEmoji(suggestion.length > 0 ? suggestion : ["✨"]);
   }
 
   return (
     <motion.div
       layout
-      className="rounded-2xl border border-white/10 p-5 flex flex-col items-center text-center gap-3"
+      className="relative rounded-2xl border border-white/10 p-5 flex flex-col items-center text-center gap-3"
     >
-      <p className="font-display text-base">{category.name}</p>
+      <p className="font-display text-base">{entry.name}</p>
 
       <button
         type="button"
@@ -59,7 +64,7 @@ export function PhotoSlot({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={stickerDataUrl}
-            alt={category.name}
+            alt={entry.name}
             className="h-full w-full object-contain p-1"
           />
         ) : (
@@ -78,15 +83,33 @@ export function PhotoSlot({
         onChange={handleChange}
       />
 
-      <button
-        type="button"
-        onClick={handlePlaceholderClick}
-        disabled={processing}
-        className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors disabled:opacity-40"
-      >
-        <Wand2 size={12} />
-        Use a generated placeholder
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setPickerOpen((v) => !v)}
+          disabled={processing}
+          className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors disabled:opacity-40"
+        >
+          <Smile size={12} />
+          Emoji
+        </button>
+        <button
+          type="button"
+          onClick={handleSuggest}
+          disabled={processing}
+          title={suggestion.length > 0 ? `Suggested: ${suggestion.join(" ")}` : "No match — uses a sparkle"}
+          className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors disabled:opacity-40"
+        >
+          <Wand2 size={12} />
+          Suggest icon
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {pickerOpen && (
+          <EmojiPicker onConfirm={handleEmojiConfirm} onClose={() => setPickerOpen(false)} />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
