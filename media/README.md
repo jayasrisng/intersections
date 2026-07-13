@@ -4,15 +4,19 @@ This folder is reserved for README and project media.
 
 ## Existing assets
 
-The README currently uses:
+The repo now includes:
 
 - `public/screenshots/hero.png`
+- `media/intersections-mobile-home.jpg`
+- `media/intersections-mobile-categories.jpg`
+- `media/intersections-mobile-quiz.jpg`
+- `media/intersections-mobile-arrange.jpg`
+- `media/intersections-walkthrough.gif`
 
 ## Useful next assets
 
-1. `intersections-flow.gif` — short loop showing quiz → archetype selection → result chart.
-2. `result-chart.png` — clean exported example of the final quadrant map.
-3. `algorithm-diagram.png` — simple diagram of quiz vector → cosine similarity → MMR diversity selection.
+1. `result-chart.png` — clean exported example of the final quadrant map.
+2. `algorithm-diagram.png` — simple diagram of quiz vector → cosine similarity → MMR diversity selection.
 
 ## Capture guidance
 

@@ -9,6 +9,8 @@ and turns them into a shareable, keynote-style positioning chart.
 
 ![Intersections landing page](public/screenshots/hero.png)
 
+![Intersections walkthrough](media/intersections-walkthrough.gif)
+
 ## How it works
 
 1. **Take the quiz** — twelve quick questions build an 8-dimensional trait
